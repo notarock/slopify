@@ -19,3 +19,13 @@
 
 # Go workspace file
 go.work
+
+# Mac/Nix stuff
+.DS_Store
+.direnv
+
+# Media files for testing
+*.mp3
+*.mp4
+*.html
+*.png
