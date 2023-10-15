@@ -10,7 +10,7 @@ func main() {
 	// ffmpeg.Input("source.mp4").Output("slop.mp4").Run()
 	videoFile := "source.mp4"
 	audioFile := "output.mp3"
-	outputFile := "output_with_audio-code.mp4"
+	outputFile := "output_with_audio.mp4"
 
 	ffmpeg.Input(videoFile)
 
