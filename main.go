@@ -9,6 +9,8 @@ import (
 	"github.com/notarock/sludger/pkg/reddit"
 )
 
+MERGE_COMMAND = "ffmpeg -i %s -i %s -c copy -map 0:v  -map 1:a %s"
+
 func main() {
 	argsWithProg := os.Args
 	if len(argsWithProg) < 2 {
@@ -57,5 +59,7 @@ func main() {
 
 	fmt.Printf("Processing audio...")
 	audio.Concatenate("audio/title.mp3", files, "output.mp3")
+
+	fmt.Println("Audio saved to output.mp3")
 
 }
