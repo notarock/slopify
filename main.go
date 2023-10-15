@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/notarock/sludger/pkg/audio"
 	"github.com/notarock/sludger/pkg/reddit"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
-
-MERGE_COMMAND = "ffmpeg -i %s -i %s -c copy -map 0:v  -map 1:a %s"
 
 func main() {
 	argsWithProg := os.Args
@@ -61,5 +62,28 @@ func main() {
 	audio.Concatenate("audio/title.mp3", files, "output.mp3")
 
 	fmt.Println("Audio saved to output.mp3")
+
+	videoFile := "source.webm"
+	audioFile := "output.mp3"
+
+	ffmpeg.Input(videoFile)
+
+	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": "00:10:55"}).Video()
+	audio := ffmpeg.Input(audioFile).Audio()
+
+	outputFile := "slop-" + strconv.FormatInt(time.Now().Unix(), 10) + ".mp4"
+
+	out := ffmpeg.
+		Output(
+			[]*ffmpeg.Stream{video, audio},
+			outputFile,
+			ffmpeg.KwArgs{"shortest": ""},
+			// ffmpeg.KwArgs{"vf": "scale=1080:1920"},
+			ffmpeg.KwArgs{"aspect": "1080:1920"},
+		)
+
+	out.Run()
+
+	fmt.Println(out.GetArgs())
 
 }
