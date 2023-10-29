@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/notarock/sludger/pkg/audio"
@@ -70,7 +69,11 @@ func main() {
 
 	ffmpeg.Input(videoFile)
 
-	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": "00:10:55"}).Video()
+	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
+	randomNumber := rand.Intn(56)    // Generate a number between 0 and 55 (inclusive)
+	fmt.Println(randomNumber)
+
+	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:55", randomNumber)}).Video()
 	audio := ffmpeg.Input(audioFile).Audio()
 
 	outputFile := "slop-" + strconv.FormatInt(time.Now().Unix(), 10) + ".mp4"
@@ -79,23 +82,7 @@ func main() {
 		ffmpeg.KwArgs{"shortest": ""},
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Crop video for phone?? (y/n): ")
-	input, err := reader.ReadString('\n')
-
-	if err != nil {
-		fmt.Println("Error reading input:", err)
-		return
-	}
-
-	// Trim space and convert to lowercase for comparison
-	input = strings.TrimSpace(strings.ToLower(input))
-
-	if input == "y" {
-		fmt.Println("You chose YES!")
-		// Add any logic you want to execute for "y" here
-		args = append(args, ffmpeg.KwArgs{"vf": "crop=800:480:x:y"})
-	}
+	crop() //#TODO: Fix this
 
 	out := ffmpeg.
 		Output(
@@ -107,5 +94,27 @@ func main() {
 	out.Run()
 
 	fmt.Println(out.GetArgs())
+}
 
+func crop() {
+	// reader := bufio.NewReader(os.Stdin)
+	// fmt.Print("Crop video for phone? (y/n): ")
+	// input, err := reader.ReadString('\n')
+
+	// if err != nil {
+	// 	fmt.Println("Error reading input:", err)
+	// 	return
+	// }
+
+	// // Trim space and convert to lowercase for comparison
+	// input = strings.TrimSpace(strings.ToLower(input))
+
+	// if input == "y" {
+	// 	fmt.Println("You chose YES!")
+	// 	// Add any logic you want to execute for "y" here
+	// 	args = append(args, ffmpeg.KwArgs{"aspect": "1080:1920"})
+
+	// 	// When source is not 16:9, crop to 16:9
+	// 	// args = append(args, ffmpeg.KwArgs{"vf": "crop=800:480:x:y"})
+	// }
 }
