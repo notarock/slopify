@@ -21,7 +21,15 @@ func ScrapeFromFile(filename string) Thread {
 }
 
 func ScrapeThread(threadURI string) Thread {
-	res, err := http.Get(threadURI)
+	req, err := http.NewRequest("GET", threadURI, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+
 	if err != nil {
 		log.Fatalln(err)
 	}
