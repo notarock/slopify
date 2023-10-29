@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/notarock/sludger/pkg/audio"
@@ -73,13 +75,33 @@ func main() {
 
 	outputFile := "slop-" + strconv.FormatInt(time.Now().Unix(), 10) + ".mp4"
 
+	args := []ffmpeg.KwArgs{
+		ffmpeg.KwArgs{"shortest": ""},
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Crop video for phone?? (y/n): ")
+	input, err := reader.ReadString('\n')
+
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return
+	}
+
+	// Trim space and convert to lowercase for comparison
+	input = strings.TrimSpace(strings.ToLower(input))
+
+	if input == "y" {
+		fmt.Println("You chose YES!")
+		// Add any logic you want to execute for "y" here
+		args = append(args, ffmpeg.KwArgs{"vf": "crop=800:480:x:y"})
+	}
+
 	out := ffmpeg.
 		Output(
 			[]*ffmpeg.Stream{video, audio},
 			outputFile,
-			ffmpeg.KwArgs{"shortest": ""},
-			// ffmpeg.KwArgs{"vf": "scale=1080:1920"},
-			ffmpeg.KwArgs{"aspect": "1080:1920"},
+			args...,
 		)
 
 	out.Run()
