@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	cloud.google.com/go/texttospeech v1.7.1
+	cloud.google.com/go/videointelligence v1.10.0
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/Vernacular-ai/godub v0.1.6
 	github.com/u2takey/ffmpeg-go v0.5.0
