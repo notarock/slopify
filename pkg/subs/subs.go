@@ -1,4 +1,4 @@
-package main
+package subs
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/notarock/sludger/pkg/audio"
+	videopb "cloud.google.com/go/videointelligence/apiv1/videointelligencepb"
 )
 
 type Transcription struct {
@@ -20,15 +20,10 @@ type Subtitle struct {
 	Transcript string `json:"transcript"`
 }
 
-func main() {
-	transcriptions, err := audio.SpeechTranscriptionURI("gs://sludger-temp/Snapinsta.app_video_404249692_2331325873721638_6752152422268909354_n.mp4")
-	if err != nil {
-		panic(err)
-	}
-
+func BuildSubtitlesFromGoogle(transcript []*videopb.SpeechTranscription) Transcription {
 	var transcription Transcription
 
-	for _, t := range transcriptions {
+	for _, t := range transcript {
 		alternative := t.GetAlternatives()[0]
 
 		fmt.Printf("Word level information:\n")
@@ -42,20 +37,10 @@ func main() {
 			})
 		}
 	}
-
-	fmt.Printf("%+v\n", transcription)
-
-	// Convert to SRT format
-	srtData := convertToSRT(transcription)
-
-	// Write to SRT file
-	err = ioutil.WriteFile("output.srt", []byte(srtData), 0644)
-	if err != nil {
-		panic(err)
-	}
+	return transcription
 }
 
-func convertToSRT(transcription Transcription) string {
+func ConvertToSRT(transcription Transcription) string {
 	var srtBuilder strings.Builder
 
 	for i, item := range transcription.Results {
@@ -76,4 +61,8 @@ func formatTimestamp(timestamp string) string {
 	}
 	t := time.Duration(seconds * float64(time.Second))
 	return fmt.Sprintf("%02d:%02d:%02d,%03d", int(t.Hours()), int(t.Minutes())%60, int(t.Seconds())%60, (t.Milliseconds())%1000)
+}
+
+func WriteSRT(file, srtData string) error {
+	return ioutil.WriteFile(file, []byte(srtData), 0644)
 }
