@@ -29,3 +29,8 @@ go.work
 *.mp4
 *.html
 *.png
+
+.terraform
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup

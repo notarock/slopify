@@ -8,10 +8,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/notarock/sludger/pkg/audio"
+	"github.com/notarock/sludger/pkg/google"
 	"github.com/notarock/sludger/pkg/reddit"
+	"github.com/notarock/sludger/pkg/subs"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
+
+const SUBTITLE_COMMAND = "\"subtitles=output.srt:force_style='FontSize=24,Alignment=10'\""
+const BUCKET_NAME = "sludger-temp"
+const SUBTITLES_FILE = "output.srt"
 
 func main() {
 	argsWithProg := os.Args
@@ -41,7 +46,7 @@ func main() {
 
 	fmt.Printf("Processing audio...")
 
-	audio.GetVoiceFile(thread.Title, "audio/title.mp3")
+	google.GetVoiceFile(thread.Title, "audio/title.mp3")
 
 	files := []string{}
 	for _, value := range thread.CommentThreads {
@@ -54,20 +59,21 @@ func main() {
 			}
 
 			filename := fmt.Sprintf("audio/%d.mp3", len(files))
-			audio.GetVoiceFile(comment, fmt.Sprintf("audio/%d.mp3", len(files)))
+			google.GetVoiceFile(comment, fmt.Sprintf("audio/%d.mp3", len(files)))
 			files = append(files, filename)
 		}
 	}
 
 	fmt.Printf("Processing audio...")
-	audio.Concatenate("audio/title.mp3", files, "output.mp3")
+	google.Concatenate("audio/title.mp3", files, "output.mp3")
 
 	fmt.Println("Audio saved to output.mp3")
 
 	videoFile := "source.webm"
 	audioFile := "output.mp3"
 
-	ffmpeg.Input(videoFile)
+	// Nécessaire?
+	// ffmpeg.Input(videoFile)
 
 	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
 	randomNumber := rand.Intn(56)    // Generate a number between 0 and 55 (inclusive)
@@ -76,13 +82,13 @@ func main() {
 	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:55", randomNumber)}).Video()
 	audio := ffmpeg.Input(audioFile).Audio()
 
-	outputFile := "slop-" + strconv.FormatInt(time.Now().Unix(), 10) + ".mp4"
+	outputFile := "slop-" + strconv.FormatInt(time.Now().Unix(), 10)
+	outputFileWithSubs := outputFile + "-subs.mp4"
+	outputFile = outputFile + ".mp4"
 
 	args := []ffmpeg.KwArgs{
 		ffmpeg.KwArgs{"shortest": ""},
 	}
-
-	crop() //#TODO: Fix this
 
 	out := ffmpeg.
 		Output(
@@ -94,27 +100,38 @@ func main() {
 	out.Run()
 
 	fmt.Println(out.GetArgs())
-}
 
-func crop() {
-	// reader := bufio.NewReader(os.Stdin)
-	// fmt.Print("Crop video for phone? (y/n): ")
-	// input, err := reader.ReadString('\n')
+	fmt.Println("Let's upload this to Google Cloud Storage")
 
-	// if err != nil {
-	// 	fmt.Println("Error reading input:", err)
-	// 	return
-	// }
+	uri, err := google.UploadFile(BUCKET_NAME, outputFile)
+	if err != nil {
+		panic(err)
+	}
 
-	// // Trim space and convert to lowercase for comparison
-	// input = strings.TrimSpace(strings.ToLower(input))
+	fmt.Println("Uploaded to " + uri)
+	defer google.DeleteFile(BUCKET_NAME, outputFile)
 
-	// if input == "y" {
-	// 	fmt.Println("You chose YES!")
-	// 	// Add any logic you want to execute for "y" here
-	// 	args = append(args, ffmpeg.KwArgs{"aspect": "1080:1920"})
+	transcript, err := google.SpeechTranscriptionURI(uri)
+	if err != nil {
+		panic(err)
+	}
 
-	// 	// When source is not 16:9, crop to 16:9
-	// 	// args = append(args, ffmpeg.KwArgs{"vf": "crop=800:480:x:y"})
-	// }
+	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript)
+
+	// Convert to SRT format
+	srtData := subs.ConvertToSRT(fullTranscript)
+
+	// Write to SRT file
+	err = subs.WriteSRT(SUBTITLES_FILE, srtData)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ffmpeg.Input(outputFile).Output(outputFileWithSubs, ffmpeg.KwArgs{"vf": SUBTITLE_COMMAND}).Run()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("All done! Your video is ready at " + outputFileWithSubs)
+
 }
