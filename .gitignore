@@ -27,8 +27,13 @@ go.work
 # Media files for testing
 *.mp3
 *.mp4
+*.webm
+*.mov
+*.srt
 *.html
 *.png
+
+.env
 
 .terraform
 .terraform.lock.hcl

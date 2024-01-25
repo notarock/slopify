@@ -2,6 +2,8 @@ resource "google_storage_bucket" "public_bucket" {
   name     = "sludger-temp"
   location = "northamerica-northeast1"
 
+  force_destroy = true
+
   website {
     main_page_suffix = "index.html"
     not_found_page   = "404.html"
