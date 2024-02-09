@@ -1,2 +1,2 @@
-# sludger
-Automated social media sludge content creation
+# brainrot
+Automated social media brainrot content creation
