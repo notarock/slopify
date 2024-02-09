@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/notarock/sludger/pkg/google"
-	"github.com/notarock/sludger/pkg/reddit"
-	"github.com/notarock/sludger/pkg/subs"
+	"github.com/notarock/goyslop/pkg/google"
+	"github.com/notarock/goyslop/pkg/reddit"
+	"github.com/notarock/goyslop/pkg/subs"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 

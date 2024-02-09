@@ -1,4 +1,4 @@
-module github.com/notarock/sludger
+module github.com/notarock/goyslop
 
 go 1.18
 

@@ -1,2 +1,2 @@
-# sludger
-Automated social media sludge content creation
+# goyslop
+Automated social media goyslop content creation
