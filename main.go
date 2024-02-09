@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/url"
 	"os"
@@ -14,7 +15,7 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-const SUBTITLE_COMMAND = "\"subtitles=output.srt:force_style='FontSize=24,Alignment=10'\""
+const SUBTITLE_COMMAND = "subtitles=output.srt:force_style='FontSize=24,Alignment=10'"
 const BUCKET_NAME = "sludger-temp"
 const SUBTITLES_FILE = "output.srt"
 
@@ -129,7 +130,7 @@ func main() {
 
 	err = ffmpeg.Input(outputFile).Output(outputFileWithSubs, ffmpeg.KwArgs{"vf": SUBTITLE_COMMAND}).Run()
 	if err != nil {
-		panic(err)
+        log.Fatal(err)
 	}
 
 	fmt.Println("All done! Your video is ready at " + outputFileWithSubs)
