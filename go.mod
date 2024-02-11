@@ -1,4 +1,4 @@
-module github.com/notarock/goyslop
+module github.com/notarock/slopify
 
 go 1.18
 
