@@ -4,8 +4,20 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/notarock/slopify/pkg/config"
 	"github.com/spf13/cobra"
 )
+
+var cfg config.Config
+
+
+func init() {
+	var err error
+	if	cfg, err = config.GetEnvConfig(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
 
 
 var rootCmd = &cobra.Command{
