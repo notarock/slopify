@@ -5,13 +5,14 @@ import (
 	"log"
 	"math/rand"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 
+	"github.com/notarock/slopify/pkg/config"
 	"github.com/notarock/slopify/pkg/google"
 	"github.com/notarock/slopify/pkg/reddit"
 	"github.com/notarock/slopify/pkg/subs"
+	"github.com/spf13/cobra"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
@@ -19,36 +20,54 @@ const SUBTITLE_COMMAND = "subtitles=output.srt:force_style='FontSize=24,Alignmen
 const BUCKET_NAME = "sludger-temp"
 const SUBTITLES_FILE = "output.srt"
 
-func full() {
-	argsWithProg := os.Args
-	if len(argsWithProg) < 2 {
-		fmt.Println("Please provide a URL or file to scrape")
-		os.Exit(1)
+func init() {
+	rootCmd.AddCommand(redditCmd)
+}
+
+var redditCmd = &cobra.Command{
+	Use:   "reddit https://old.reddit.com/r/...",
+	Short: "Generate a video from a reddit thread",
+	Long: `Generate a video from a reddit URL or a file containing the HTML of the thread.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if	err := redditVideo(cfg,args); err != nil {
+			log.Fatalf("Error generating slop from reddit thread: %v", err)
+		}
+	},
+}
+
+func redditVideo(cfg config.Config, args []string) (error) {
+	if len(args) < 1 {
+		return fmt.Errorf("No URL or file were provided. Please provide a URL or file containing the HTML of the thread.")
 	}
 
-	arg := argsWithProg[1]
+	arg := args[0]
 
 	_, err := url.ParseRequestURI(arg)
+
 	// If it's a URL, scrape it
+	// If it's a file, scrape it
 	var thread reddit.Thread
 	if err == nil {
 		thread = reddit.ScrapeThread(arg)
 	} else {
+		err = nil
 		thread = reddit.ScrapeFromFile(arg)
 	}
 
-	fmt.Printf("%+v\n", thread)
-	fmt.Println(thread.TotalComments())
+	// TODO: Debug
+	// fmt.Printf("%+v\n", thread)
+	// fmt.Println(thread.TotalComments())
 
 	if thread.Title == "" {
-		fmt.Println("No title found ??")
-		os.Exit(1)
+		return fmt.Errorf("No title found in the thread, please provide a valid URL or file containing the HTML of the thread.")
 	}
 
-	fmt.Printf("Processing audio...")
+	// TODO: Debug
+	// fmt.Printf("Processing audio...")
 
 	google.GetVoiceFile(thread.Title, "audio/title.mp3")
 
+	// TODO: Function to get the top comments and limit depth
 	files := []string{}
 	for _, value := range thread.CommentThreads {
 		if len(files) > 10 {
@@ -65,19 +84,13 @@ func full() {
 		}
 	}
 
-	fmt.Printf("Processing audio...")
 	google.Concatenate("audio/title.mp3", files, "output.mp3")
-
-	fmt.Println("Audio saved to output.mp3")
 
 	videoFile := "source.webm"
 	audioFile := "output.mp3"
 
-	// Nécessaire?
-	// ffmpeg.Input(videoFile)
-
-	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
-	randomNumber := rand.Intn(56)    // Generate a number between 0 and 55 (inclusive)
+	randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomNumber := randomWithSeed.Intn(56)    // Generate a number between 0 and 55 (inclusive)
 	fmt.Println(randomNumber)
 
 	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:55", randomNumber)}).Video()
@@ -87,7 +100,7 @@ func full() {
 	outputFileWithSubs := outputFile + "-subs.mp4"
 	outputFile = outputFile + ".mp4"
 
-	args := []ffmpeg.KwArgs{
+	kwArgs := []ffmpeg.KwArgs{
 		ffmpeg.KwArgs{"shortest": ""},
 	}
 
@@ -95,18 +108,19 @@ func full() {
 		Output(
 			[]*ffmpeg.Stream{video, audio},
 			outputFile,
-			args...,
+			kwArgs...,
 		)
 
-	out.Run()
-
-	fmt.Println(out.GetArgs())
+	err = out.Run()
+	if err != nil {
+		return fmt.Errorf("Error generating video: %v", err)
+	}
 
 	fmt.Println("Let's upload this to Google Cloud Storage")
 
 	uri, err := google.UploadFile(BUCKET_NAME, outputFile)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Error uploading video to Google Cloud Storage: %v", err)
 	}
 
 	fmt.Println("Uploaded to " + uri)
@@ -114,7 +128,7 @@ func full() {
 
 	transcript, err := google.SpeechTranscriptionURI(uri)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Error transcribing video: %v", err)
 	}
 
 	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript)
@@ -125,14 +139,15 @@ func full() {
 	// Write to SRT file
 	err = subs.WriteSRT(SUBTITLES_FILE, srtData)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Error writing SRT file: %v", err)
 	}
 
 	err = ffmpeg.Input(outputFile).Output(outputFileWithSubs, ffmpeg.KwArgs{"vf": SUBTITLE_COMMAND}).Run()
 	if err != nil {
-        log.Fatal(err)
+		return fmt.Errorf("Error adding subtitles to video: %v", err)
 	}
 
 	fmt.Println("All done! Your video is ready at " + outputFileWithSubs)
 
+	return nil
 }
