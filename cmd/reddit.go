@@ -3,13 +3,13 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/notarock/slopify/pkg/config"
 	"github.com/notarock/slopify/pkg/google"
+	"github.com/notarock/slopify/pkg/pexels"
 	"github.com/notarock/slopify/pkg/reddit"
 	"github.com/notarock/slopify/pkg/subs"
 	"github.com/spf13/cobra"
@@ -20,7 +20,10 @@ const SUBTITLE_COMMAND = "subtitles=output.srt:force_style='FontSize=24,Alignmen
 const BUCKET_NAME = "sludger-temp"
 const SUBTITLES_FILE = "output.srt"
 
+var footageQuery string
+
 func init() {
+	rootCmd.PersistentFlags().StringVar(&footageQuery, "footage", "", "Search query for Pexels footage")
 	rootCmd.AddCommand(redditCmd)
 }
 
@@ -86,14 +89,33 @@ func redditVideo(cfg config.Config, args []string) (error) {
 
 	google.Concatenate("audio/title.mp3", files, "output.mp3")
 
-	videoFile := "source.webm"
+	var videoFile string
+
+	if footageQuery != "" {
+		fmt.Println("Searching for footage on Pexels")
+		client := pexels.NewPexelsClient(cfg.PexelsAPIKey)
+		outputDirectory := "./footage"
+		path, err := client.DownloadRandomVideo(footageQuery, outputDirectory)
+		if err != nil {
+			return fmt.Errorf("Error searching for footage: %v", err)
+		}
+
+		videoFile = path
+	} else {
+		videoFile = "source.webm"
+	}
+
 	audioFile := "output.mp3"
 
-	randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
-	randomNumber := randomWithSeed.Intn(56)    // Generate a number between 0 and 55 (inclusive)
-	fmt.Println(randomNumber)
+	// TODO: Randomize the start time
+	// This works when using an hour long footage of subway surfer
+	//
+	// randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	// randomNumber := randomWithSeed.Intn(56)    // Generate a number between 0 and 55 (inclusive)
+	// fmt.Println(randomNumber)
+	// video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:55", randomNumber)}).Video()
 
-	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:55", randomNumber)}).Video()
+	video := ffmpeg.Input(videoFile).Video()
 	audio := ffmpeg.Input(audioFile).Audio()
 
 	outputFile := "slop-" + strconv.FormatInt(time.Now().Unix(), 10)
