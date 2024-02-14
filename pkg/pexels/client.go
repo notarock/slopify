@@ -62,9 +62,9 @@ func (c *PexelsClient) DownloadRandomVideo(query , resultDir string) (string, er
 	}
 
 	// Randomize the video selection
-	rand.Seed(time.Now().UnixNano())
+	randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// Select a random video from the top 10 results
-	selection := rand.Intn(int(math.Min(float64(len(resutls)), SELECT_FROM_TOP_10)))
+	selection := randomWithSeed.Intn(int(math.Min(float64(len(resutls)), SELECT_FROM_TOP_10)))
 	link := resutls[selection].VideoFiles[0].Link
 	name := strconv.FormatInt(time.Now().Unix(), 10)
 	extension := GetVideoExtension(resutls[selection].VideoFiles[0].Link)
