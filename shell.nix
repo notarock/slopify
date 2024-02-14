@@ -8,6 +8,7 @@ mkShell {
       [ google-cloud-sdk.components.gke-gcloud-auth-plugin ])
       terraform
       ffmpeg
+      yt-dlp
   ];
 
   shellHook = ''
