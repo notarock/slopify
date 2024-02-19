@@ -1,5 +1,5 @@
 resource "google_storage_bucket" "public_bucket" {
-  name     = "sludger-temp"
+  name     = "slopify-transcription-buffer"
   location = "northamerica-northeast1"
 
   force_destroy = true

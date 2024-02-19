@@ -14,7 +14,7 @@ mkShell {
   shellHook = ''
     echo Performing gcloud auth login
     echo gcloud auth login
-    echo gcloud config set project memes-traduit
+    echo gcloud config set project slopify
     echo gcloud auth application-default login
   '';
 }
