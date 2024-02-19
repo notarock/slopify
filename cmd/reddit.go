@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/notarock/slopify/pkg/config"
 	"github.com/notarock/slopify/pkg/google"
-	"github.com/notarock/slopify/pkg/pexels"
 	"github.com/notarock/slopify/pkg/reddit"
 	"github.com/notarock/slopify/pkg/subs"
 	"github.com/spf13/cobra"
@@ -17,13 +18,13 @@ import (
 )
 
 const SUBTITLE_COMMAND = "subtitles=output.srt:force_style='FontSize=24,Alignment=10'"
-const BUCKET_NAME = "sludger-temp"
+const BUCKET_NAME = "slopify-transcription-buffer"
 const SUBTITLES_FILE = "output.srt"
 
-var footageQuery string
+var footageDir string
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&footageQuery, "footage", "", "Search query for Pexels footage")
+	rootCmd.PersistentFlags().StringVar(&footageDir, "footage", "", "Directory to search for footage. If not provided, the default footage will be used.")
 	rootCmd.AddCommand(redditCmd)
 }
 
@@ -91,15 +92,11 @@ func redditVideo(cfg config.Config, args []string) (error) {
 
 	var videoFile string
 
-	if footageQuery != "" {
-		fmt.Println("Searching for footage on Pexels")
-		client := pexels.NewPexelsClient(cfg.PexelsAPIKey)
-		outputDirectory := "./footage"
-		path, err := client.DownloadRandomVideo(footageQuery, outputDirectory)
+	if footageDir != "" {
+		path, err := pickFromDirectory(footageDir)
 		if err != nil {
-			return fmt.Errorf("Error searching for footage: %v", err)
+			return fmt.Errorf("Error picking a video from the directory: %v", err)
 		}
-
 		videoFile = path
 	} else {
 		videoFile = "source.webm"
@@ -172,4 +169,16 @@ func redditVideo(cfg config.Config, args []string) (error) {
 	fmt.Println("All done! Your video is ready at " + outputFileWithSubs)
 
 	return nil
+}
+
+func pickFromDirectory(dir string) (string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+
+	randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomNumber := randomWithSeed.Intn(len(files))    // Generate a number between 0 and 55 (inclusive)
+
+	return dir + "/" + files[randomNumber].Name(), nil
 }
