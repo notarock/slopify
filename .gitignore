@@ -41,3 +41,5 @@ terraform.tfstate
 terraform.tfstate.backup
 
 footage/
+youtubeConfig.json
+token.json
