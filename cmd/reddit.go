@@ -96,6 +96,11 @@ func redditVideo(cfg config.Config, args []string) error {
 
 	google.Concatenate("audio/title.mp3", files, fullAudioPath)
 
+	err = thread.DumpToFile(workingDir + "/thread.json")
+	if err != nil {
+		return fmt.Errorf("Error writing thread to file: %v", err)
+	}
+
 	var videoFile string
 
 	if footageDir != "" {

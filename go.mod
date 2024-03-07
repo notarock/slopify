@@ -9,6 +9,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/Vernacular-ai/godub v0.1.6
 	github.com/joho/godotenv v1.5.1
+	github.com/sashabaranov/go-openai v1.20.2
 	github.com/spf13/cobra v1.8.0
 	github.com/u2takey/ffmpeg-go v0.5.0
 	golang.org/x/oauth2 v0.17.0
