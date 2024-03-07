@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,8 +9,10 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/notarock/slopify/pkg/chatgpt"
 	"github.com/notarock/slopify/pkg/config"
 	"github.com/notarock/slopify/pkg/google"
 	"github.com/notarock/slopify/pkg/reddit"
@@ -27,6 +30,8 @@ var workingDir string
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&footageDir, "footage", "", "Directory to search for footage. If not provided, the default footage will be used.")
+	rootCmd.PersistentFlags().StringVar(&tokenFile, "tokenFile", "token.json", "Path to your token file where you want to store your YouTube token. If not provided, the default token file will be used.")
+	rootCmd.PersistentFlags().StringVar(&oauthConfigFile, "oauthConfigFile", "youtubeConfig.json", "Path to your 0AUTH client secret file.")
 
 	redditCmd.PersistentFlags().StringVar(&workingDir, "workingDir", "/tmp/slopify", "Directory to store temporary files. If not provided, the default working directory will be used.")
 
@@ -78,11 +83,11 @@ func redditVideo(cfg config.Config, args []string) error {
 	// TODO: Function to get the top comments and limit depth
 	files := []string{}
 	for _, value := range thread.CommentThreads {
-		if len(files) > 10 {
+		if len(files) > 0 {
 			break
 		}
 		for _, comment := range value.Comments {
-			if len(files) > 10 {
+			if len(files) > 0 {
 				break
 			}
 
@@ -96,7 +101,6 @@ func redditVideo(cfg config.Config, args []string) error {
 
 	google.Concatenate("audio/title.mp3", files, fullAudioPath)
 
-	err = thread.DumpToFile(workingDir + "/thread.json")
 	if err != nil {
 		return fmt.Errorf("Error writing thread to file: %v", err)
 	}
@@ -179,7 +183,64 @@ func redditVideo(cfg config.Config, args []string) error {
 	fmt.Println("All done! Your video is ready at " + outputFileWithSubs)
 	fmt.Println("output path: " + outputFileWithSubs)
 
+	// Ask if the user wants to upload the video to YouTube
+	upload, err := askForConfirmation("Do you want to upload the video to YouTube?")
+	if err != nil {
+		return fmt.Errorf("Error asking for confirmation: %v", err)
+	}
+
+	if !upload {
+		fmt.Println("Video not uploaded to YouTube.")
+		return nil
+	}
+
+	uploader, err := google.NewYouTubeUploader(oauthConfigFile, tokenFile)
+	if err != nil {
+		return fmt.Errorf("Error creating YouTube uploader: %v", err)
+	}
+
+	response, err := uploader.GetUserInfo()
+	if err != nil {
+		return fmt.Errorf("Error getting user info: %v", err)
+	}
+
+	for _, item := range response.Items {
+		log.Printf("This is the info for your YouTube account: \n")
+		log.Printf("Channel ID: %s\n", item.Id)
+		log.Printf("Title: %s\n", item.Snippet.Title)
+		log.Printf("Description: %s\n", item.Snippet.Description)
+		log.Printf("Custom URL: %s\n", item.Snippet.CustomUrl)
+	}
+
+	fmt.Println("Prompting for title, description and tags")
+
+	client := chatgpt.NewGPTClient(cfg.OpenaiKey)
+	content := thread.ToString()
+	res, err := client.PromptFromContent(content)
+
+	log.Printf("Uploading video: %s\n", videoPath)
+	log.Printf("Title: %s\n", res.Title)
+	log.Printf("Description: %s\n", res.Description)
+	uploadedVideo, err := uploader.UploadVideo(outputFileWithSubs, res.Title, res.Description, "private")
+
+	if err != nil {
+		return fmt.Errorf("Error uploading video: %v", err)
+	}
+
+	log.Printf("Video uploaded successfully: %s\n", uploadedVideo.Id)
+
 	return nil
+}
+func askForConfirmation(message string) (bool, error) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(message + " (y/n): ")
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false, fmt.Errorf("Error reading input: %v", err)
+	}
+
+	response = strings.TrimSpace(response)
+	return strings.ToLower(response) == "y", nil
 }
 
 func pickFromDirectory(dir string) (string, error) {
