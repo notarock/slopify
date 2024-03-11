@@ -99,7 +99,7 @@ func redditVideo(cfg config.Config, args []string) error {
 
 	fullAudioPath := workingDir + "/output.mp3"
 
-	google.Concatenate("audio/title.mp3", files, fullAudioPath)
+	google.Concatenate(workingDir+"/audio/title.mp3", files, fullAudioPath)
 
 	if err != nil {
 		return fmt.Errorf("Error writing thread to file: %v", err)
