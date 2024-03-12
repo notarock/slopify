@@ -1,0 +1,34 @@
+name: Build and publish maven package
+run-name: "Publish maven package for [${{ github.ref_name }}]"
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    uses: ./go.yaml
+    with:
+      upload: true
+      artifact-name: slopify-${{ github.ref_name }}
+
+  release:
+    runs-on: self-hosted
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: slopify-${{ github.ref_name }}
+
+      - name: Find path to zip
+        id: zip
+        run: |
+          ZIP_PATH=$(find "$(pwd)" -type f -name "slopify")
+          echo "zip-path=${ZIP_PATH}" >> $GITHUB_OUTPUT
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ steps.zip.outputs.zip-path }}
