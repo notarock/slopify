@@ -6,9 +6,10 @@ mkShell {
   buildInputs = [
     (google-cloud-sdk.withExtraComponents
       [ google-cloud-sdk.components.gke-gcloud-auth-plugin ])
-      terraform
+      opentofu
       ffmpeg
       yt-dlp
+      ollama
   ];
 
   shellHook = ''
