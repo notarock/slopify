@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "google" {
-  project     = "sludger"
+  project     = "slopify-414804"
   region      = "northamerica-northeast1"
 }
 
