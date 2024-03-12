@@ -75,5 +75,6 @@ Il faut activer ces API:
 
 6. Authorizer youtube par l'app Oauth. Le cli va demander le code qui va se retrouver dans l'url de callback de l'app
 
-Il faut télécharger le fichier de configuration json pour l'app oauth et lancer le programme, ca va initier le flow de authentification pour youtube.
-ensuite copier le code dans l'URL callback et le coller dans le terminal
+Il faut télécharger le fichier de configuration json pour l'app oauth et lancer le programme, ca va
+initier le flow de authentification pour youtube.  ensuite copier le code dans l'URL callback et le
+coller dans le terminal
