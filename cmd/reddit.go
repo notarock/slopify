@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -163,19 +164,22 @@ func redditVideo(cfg config.Config, args []string) error {
 	fmt.Println("Let's upload this to Google Cloud Storage")
 
 	uri, err := google.UploadFile(BUCKET_NAME, outputFile)
+	defer google.DeleteFile(BUCKET_NAME, filepath.Base(outputFile))
 	if err != nil {
 		return fmt.Errorf("Error uploading video to Google Cloud Storage: %v", err)
 	}
 
 	fmt.Println("Uploaded to " + uri)
-	defer google.DeleteFile(BUCKET_NAME, outputFile)
 
+	fmt.Println("Transcribing video...")
 	transcript, err := google.SpeechTranscriptionURI(uri)
 	if err != nil {
 		return fmt.Errorf("Error transcribing video: %v", err)
 	}
 
 	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript)
+
+	fmt.Println("Converting to SRT format...")
 
 	// Convert to SRT format
 	srtData := subs.ConvertToSRT(fullTranscript)
@@ -186,6 +190,8 @@ func redditVideo(cfg config.Config, args []string) error {
 	if err != nil {
 		return fmt.Errorf("Error writing SRT file: %v", err)
 	}
+
+	fmt.Println("Adding subtitles to video...")
 
 	err = ffmpeg.Input(outputFile).Output(outputFileWithSubs, ffmpeg.KwArgs{"vf": fmt.Sprintf(SUBTITLE_COMMAND, srtPath)}).Run()
 	if err != nil {
