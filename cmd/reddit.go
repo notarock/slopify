@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -132,8 +134,18 @@ func redditVideo(cfg config.Config, args []string) error {
 	outputFileWithSubs := outputFile + "-subs.mp4"
 	outputFile = outputFile + ".mp4"
 
+	// Get the resolution of the video
+	probeOutput, err := probeVideoResolution(videoFile)
+	if err != nil {
+		return fmt.Errorf("Error probing video resolution: %v", err)
+	}
+
+	height := probeOutput.Streams[0].Height
+	width := probeOutput.Streams[0].Height / 16 * 9
+
 	kwArgs := []ffmpeg.KwArgs{
 		ffmpeg.KwArgs{"shortest": ""},
+		ffmpeg.KwArgs{"vf": fmt.Sprintf("crop=%d:%d", width, height)},
 	}
 
 	out := ffmpeg.
@@ -285,4 +297,31 @@ func createDirectory(directory string) error {
 		return err
 	}
 	return nil
+}
+
+type FFProbeOutput struct {
+	Streams []struct {
+		Width  int `json:"width"`
+		Height int `json:"height"`
+	} `json:"streams"`
+}
+
+func probeVideoResolution(filepath string) (FFProbeOutput, error) {
+	// Construct the ffprobe command to get video resolution
+	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", filepath)
+
+	// Execute the command
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error executing ffprobe:", err)
+		return FFProbeOutput{}, err
+	}
+	// Parse the output
+	var probeOutput FFProbeOutput
+	if err := json.Unmarshal(output, &probeOutput); err != nil {
+		fmt.Println("Error parsing ffprobe output:", err)
+		return FFProbeOutput{}, err
+	}
+
+	return probeOutput, nil
 }
