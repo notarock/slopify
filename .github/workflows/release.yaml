@@ -1,5 +1,5 @@
-name: Build and publish maven package
-run-name: "Publish maven package for [${{ github.ref_name }}]"
+name: Release slopify
+run-name: "Publish release [${{ github.ref_name }}]"
 
 on:
   push:
