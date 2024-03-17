@@ -76,6 +76,8 @@ func redditVideo(cfg config.Config, args []string) error {
 		thread = reddit.ScrapeFromFile(arg)
 	}
 
+	fmt.Println("Title: " + thread.Title)
+	fmt.Println("Total comments: " + strconv.Itoa(thread.TotalComments()))
 	if thread.Title == "" {
 		return fmt.Errorf("No title found in the thread, please provide a valid URL or file containing the HTML of the thread.")
 	}

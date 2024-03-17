@@ -25,8 +25,8 @@ var openaiCmd = &cobra.Command{
 }
 
 func doOpenai(cfg config.Config, args []string) error {
-	client := chatgpt.NewGPTClient(cfg.OpenaiKey)
 	content := "This is a test prompt. Be creative! Create a story that will make people want to watch the video."
+	client := chatgpt.NewGPTClient(cfg.OpenaiKey)
 	res, err := client.PromptFromContent(content)
 	fmt.Println(res)
 	return err

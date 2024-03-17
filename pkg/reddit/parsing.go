@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -20,12 +21,24 @@ func ScrapeFromFile(filename string) Thread {
 	return ParseHtml(file, "")
 }
 
+var agents = []string{
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 1]]0.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.864.48 Safari/537.36 Edg/91.0.864.48",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 OPR/77.0.4054.64",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+}
+
 func ScrapeThread(threadURI string) Thread {
-	req, err := http.NewRequest("GET", threadURI, nil)
+	reqURL := strings.Replace(threadURI, "www.reddit.com", "old.reddit.com", 1)
+	randomIndex := rand.Intn(len(agents))
+	// Pick an item randomly
+	randomUserAgent := agents[randomIndex]
+
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	req.Header.Set("User-Agent", randomUserAgent)
 
 	client := &http.Client{}
 	res, err := client.Do(req)
@@ -58,49 +71,29 @@ func ParseHtml(body io.ReadCloser, threadURI string) Thread {
 
 	commentArea := doc.Find(".nestedlisting")
 
-	ignoreNext := 0
+	s := commentArea.Find(".thing")
+	// If ignoring the next comment, skip it
 
-	commentArea.Find(".thing").Each(func(i int, s *goquery.Selection) {
-		// If ignoring the next comment, skip it
-		if ignoreNext != 0 {
-			ignoreNext = ignoreNext - 1
+	Comment := Comment{}
+
+	// Code dégueulasse
+	// TODO: Refactor this
+	// TODO: Add depth to the comment struct
+	// TODO: Add a function to get the top comments and limit depth
+	depth := 2
+	comments := s.Find(".md")
+	comments.Each(func(i int, s *goquery.Selection) {
+		if depth == 0 {
 			return
 		}
 
-		comments := s.Find(".md")
-		Comment := Comment{}
-		ignoreNext = comments.Length() - 1
-
-		fmt.Println("Ignoring comments: ", ignoreNext)
-
-		comments.Each(func(i int, s *goquery.Selection) {
-			commentText := s.Text()
-			cleanedText := strings.Replace(commentText, "\n", "", -1)
-			Comment.Comments = append(Comment.Comments, cleanedText)
-		})
-
-		thread.CommentThreads = append(thread.CommentThreads, Comment)
+		commentText := s.Text()
+		cleanedText := strings.Replace(commentText, "\n", "", -1)
+		Comment.Comments = append(Comment.Comments, cleanedText)
+		depth--
 	})
 
-	// doc.Find(".details").Each(func(i int, s *goquery.Selection) {
-	// 	// For each item found, get the title, link, tags and author.
-	// 	var taglist []string
-	// 	if tags, ok := s.Find(".tag").Attr("title"); ok {
-	// 		taglist = strings.Split(tags, TAGS_SEPARATOR)
-	// 	}
-
-	// 	article := articles.Article{
-	// 		ID:     articles.LinkToID(link),
-	// 		Title:  title,
-	// 		Link:   link,
-	// 		Tags:   taglist,
-	// 		Author: author,
-	// 		Source: SOURCE_NAME,
-	// 	}
-
-	// 	lobsterArticles = append(lobsterArticles, article)
-	// })
+	thread.CommentThreads = append(thread.CommentThreads, Comment)
 
 	return thread
-
 }
