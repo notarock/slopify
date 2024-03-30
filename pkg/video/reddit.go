@@ -2,6 +2,7 @@ package video
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -94,20 +95,9 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 
 	// TODO: Randomize the start time
 	// This works when using an hour long footage of subway surfer
-	//
-	// randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
-	// randomNumber := randomWithSeed.Intn(56)    // Generate a number between 0 and 55 (inclusive)
-	// fmt.Println(randomNumber)
-	// video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:55", randomNumber)}).Video()
-
-	video := ffmpeg.Input(videoFile).Video()
-	audio := ffmpeg.Input(fullAudioPath).Audio()
-
-	outputFile := input.WorkingDirectory + "/" + "slop-" + strconv.FormatInt(time.Now().Unix(), 10)
-	outputFileWithSubs := outputFile + "-subs.mp4"
-	outputFile = outputFile + ".mp4"
 
 	// Get the resolution of the video
+
 	probeOutput, err := probeVideoResolution(videoFile)
 	if err != nil {
 		return vid, fmt.Errorf("Error probing video resolution: %v", err)
@@ -115,11 +105,30 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 
 	height := probeOutput.Streams[0].Height
 	width := probeOutput.Streams[0].Height / 16 * 9
+	duration, err := strconv.ParseFloat(probeOutput.Format.Duration, 64)
+
+	if err != nil {
+		fmt.Printf("Error converting string to float64: %s\n", err)
+		return
+	}
+	// Convert float64 to int (truncating the decimal part)
+	minutes := int(duration) / 60
+
+	randomWithSeed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomNumber := randomWithSeed.Intn(minutes - 1) // Generate a number between 0 and 55 (inclusive)
+	fmt.Printf("Random is %d\n", randomNumber)
 
 	kwArgs := []ffmpeg.KwArgs{
 		ffmpeg.KwArgs{"shortest": ""},
 		ffmpeg.KwArgs{"vf": fmt.Sprintf("crop=%d:%d", width, height)},
 	}
+
+	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:00", randomNumber)}).Video()
+	audio := ffmpeg.Input(fullAudioPath).Audio()
+
+	outputFile := input.WorkingDirectory + "/" + "slop-" + strconv.FormatInt(time.Now().Unix(), 10)
+	outputFileWithSubs := outputFile + "-subs.mp4"
+	outputFile = outputFile + ".mp4"
 
 	out := ffmpeg.
 		Output(

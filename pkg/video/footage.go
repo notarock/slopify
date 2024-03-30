@@ -9,11 +9,16 @@ import (
 	"time"
 )
 
+// Updated FFProbeOutput struct to include the Duration field.
 type FFProbeOutput struct {
 	Streams []struct {
-		Width  int `json:"width"`
-		Height int `json:"height"`
+		Width    int     `json:"width"`
+		Height   int     `json:"height"`
+		Duration float64 `json:"duration,string"` // Use string tag to handle both numeric and string durations.
 	} `json:"streams"`
+	Format struct {
+		Duration string `json:"duration"`
+	} `json:"format"`
 }
 
 func pickFootageFromDirectory(dir string) (string, error) {
@@ -31,7 +36,7 @@ func pickFootageFromDirectory(dir string) (string, error) {
 func probeVideoResolution(filepath string) (FFProbeOutput, error) {
 	var probeOutput FFProbeOutput
 
-	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", filepath)
+	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "format=duration:stream=width,height", "-of", "json", filepath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return probeOutput, fmt.Errorf("error executing ffprobe: %v", err)
