@@ -33,8 +33,8 @@ func GetVoiceFile(toSay, outputPath string) {
 		// voice gender ("neutral").
 		Voice: &texttospeechpb.VoiceSelectionParams{
 			LanguageCode: "en-US",
-			Name:         "en-US-Wavenet-F", // This is one of the WaveNet female voices for en-US
-			SsmlGender:   texttospeechpb.SsmlVoiceGender_FEMALE,
+			Name:         "en-US-Wavenet-J",
+			SsmlGender:   texttospeechpb.SsmlVoiceGender_MALE,
 		},
 		// Select the type of audio file you want returned.
 		AudioConfig: &texttospeechpb.AudioConfig{
