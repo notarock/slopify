@@ -14,6 +14,7 @@ require (
 	github.com/u2takey/ffmpeg-go v0.5.0
 	golang.org/x/oauth2 v0.17.0
 	google.golang.org/api v0.165.0
+	gopkg.in/gographics/imagick.v3 v3.5.3
 )
 
 require (
@@ -28,6 +29,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/gographics/imagick v3.2.0+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect

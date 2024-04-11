@@ -20,11 +20,16 @@ type Subtitle struct {
 	Transcript string `json:"transcript"`
 }
 
-func BuildSubtitlesFromGoogle(transcript []*videopb.SpeechTranscription) Transcription {
+func BuildSubtitlesFromGoogle(transcript []*videopb.SpeechTranscription, skipFirstSentence bool) Transcription {
 	var transcription Transcription
+	skipped := false
 
 	for _, t := range transcript {
 		alternative := t.GetAlternatives()[0]
+		if skipFirstSentence && !skipped {
+			skipped = true
+			continue
+		}
 
 		fmt.Printf("Word level information:\n")
 		for _, wordInfo := range alternative.GetWords() {

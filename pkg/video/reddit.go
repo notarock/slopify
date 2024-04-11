@@ -158,7 +158,7 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 		return vid, fmt.Errorf("Error transcribing video: %v", err)
 	}
 
-	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript)
+	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript, true)
 
 	fmt.Println("Converting to SRT format...")
 
