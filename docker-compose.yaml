@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  slop:
+    build: .
+    env_file: .env
+    entrypoint: go run main.go version
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/usr/src/app/slopify.json
+    volumes:
+      - "/Users/notarock/.config/gcloud/application_default_credentials.json:/usr/src/app/slopify.json"
+      - "./:/src"
