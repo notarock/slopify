@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/notarock/slopify/pkg/google"
@@ -123,8 +124,8 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 		ffmpeg.KwArgs{"vf": fmt.Sprintf("crop=%d:%d", width, height)},
 	}
 
-	video := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:00", randomNumber)}).Video()
-	audio := ffmpeg.Input(fullAudioPath).Audio()
+	ffmpegVideo := ffmpeg.Input(videoFile, ffmpeg.KwArgs{"ss": fmt.Sprintf("00:%d:00", randomNumber)}).Video()
+	ffmpegAudio := ffmpeg.Input(fullAudioPath).Audio()
 
 	outputFile := input.WorkingDirectory + "/" + "slop-" + strconv.FormatInt(time.Now().Unix(), 10)
 	outputFileWithSubs := outputFile + "-subs.mp4"
@@ -132,7 +133,7 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 
 	out := ffmpeg.
 		Output(
-			[]*ffmpeg.Stream{video, audio},
+			[]*ffmpeg.Stream{ffmpegVideo, ffmpegAudio},
 			outputFile,
 			kwArgs...,
 		)
@@ -174,18 +175,52 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 
 	fmt.Println("Adding subtitles to video...")
 
-	err = ffmpeg.Input(outputFile).Output(outputFileWithSubs, ffmpeg.KwArgs{"vf": fmt.Sprintf(SUBTITLE_COMMAND, srtPath)}).Run()
+	err = ffmpeg.
+		Input(outputFile).
+		Output(outputFileWithSubs, ffmpeg.KwArgs{"vf": fmt.Sprintf(SUBTITLE_COMMAND, srtPath)}).
+		Run()
+
 	if err != nil {
 		return vid, fmt.Errorf("Error adding subtitles to video: %v", err)
 	}
 
-	fmt.Println("All done! Your video is ready at " + outputFileWithSubs)
-	fmt.Println("output path: " + outputFileWithSubs)
+	// Create title image
+	titleEndTime := fullTranscript.Results[0].StartTime
+
+	titleImage := CreateTitleCard(thread.Title, input.WorkingDirectory+"/title_image.png", width)
+
+	// FFmpeg command to overlay the title image onto the video
+	// Convert titleEndTime to a float64
+	// Split the string by the dot character
+	parts := strings.Split(strings.TrimSpace(titleEndTime), ".")
+
+	// Parse the first segment to an integer
+	titleEndTimeInt, err := strconv.Atoi(parts[0])
+	if err != nil {
+		fmt.Println("Error parsing titleEndTime:", err)
+		return
+	}
+
+	completeFilePath := strings.Split(outputFile, ".")[0] + "-complete.mp4"
+	err = ffmpeg.Input(outputFileWithSubs).Output(
+		completeFilePath,
+		ffmpeg.KwArgs{"i": titleImage},
+		ffmpeg.KwArgs{"filter_complex": fmt.Sprintf("[0:v][1:v] overlay=(W-w)/2:(H-h)/2:enable='between(t,0,%d)'", titleEndTimeInt)},
+	).Run()
+
+	if err != nil {
+		return vid, fmt.Errorf("Error overlaying title image onto video: %v", err)
+	}
+
+	fmt.Println("Video with overlay created successfully")
+
+	fmt.Println("All done! Your video is ready at " + completeFilePath)
+	fmt.Println("output path: " + completeFilePath)
 
 	vid = SlopVideo{
 		Title:      thread.Title,
 		Transcript: thread.ToString(),
-		Path:       outputFileWithSubs,
+		Path:       completeFilePath,
 		AudioPath:  fullAudioPath,
 	}
 
