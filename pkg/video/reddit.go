@@ -76,7 +76,8 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 
 	fullAudioPath := input.WorkingDirectory + "/output.mp3"
 
-	google.Concatenate(input.WorkingDirectory+"/audio/title.mp3", files, fullAudioPath)
+	titleAudioFile := input.WorkingDirectory + "/audio/title.mp3"
+	google.Concatenate(titleAudioFile, files, fullAudioPath)
 
 	if err != nil {
 		return vid, fmt.Errorf("Error writing thread to file: %v", err)
@@ -159,7 +160,11 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 		return vid, fmt.Errorf("Error transcribing video: %v", err)
 	}
 
-	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript, true)
+	titleDuration, err := subs.AudioDuration(titleAudioFile)
+	if err != nil {
+		return vid, fmt.Errorf("Error getting audio duration: %v", err)
+	}
+	fullTranscript := subs.BuildSubtitlesFromGoogle(transcript, titleDuration)
 
 	fmt.Println("Converting to SRT format...")
 
@@ -185,27 +190,13 @@ func BuildFromThread(input RedditThreadVideoInput) (vid SlopVideo, err error) {
 	}
 
 	// Create title image
-	titleEndTime := fullTranscript.Results[0].StartTime
-
 	titleImage := CreateTitleCard(thread.Title, input.WorkingDirectory+"/title_image.png", width)
-
-	// FFmpeg command to overlay the title image onto the video
-	// Convert titleEndTime to a float64
-	// Split the string by the dot character
-	parts := strings.Split(strings.TrimSpace(titleEndTime), ".")
-
-	// Parse the first segment to an integer
-	titleEndTimeInt, err := strconv.Atoi(parts[0])
-	if err != nil {
-		fmt.Println("Error parsing titleEndTime:", err)
-		return
-	}
-
 	completeFilePath := strings.Split(outputFile, ".")[0] + "-complete.mp4"
+
 	err = ffmpeg.Input(outputFileWithSubs).Output(
 		completeFilePath,
 		ffmpeg.KwArgs{"i": titleImage},
-		ffmpeg.KwArgs{"filter_complex": fmt.Sprintf("[0:v][1:v] overlay=(W-w)/2:(H-h)/2:enable='between(t,0,%d)'", titleEndTimeInt)},
+		ffmpeg.KwArgs{"filter_complex": fmt.Sprintf("[0:v][1:v] overlay=(W-w)/2:(H-h)/2:enable='between(t,0,%d)'", int(titleDuration))},
 	).Run()
 
 	if err != nil {

@@ -2,12 +2,15 @@ package subs
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	videopb "cloud.google.com/go/videointelligence/apiv1/videointelligencepb"
+	"github.com/tcolgate/mp3"
 )
 
 type Transcription struct {
@@ -20,26 +23,24 @@ type Subtitle struct {
 	Transcript string `json:"transcript"`
 }
 
-func BuildSubtitlesFromGoogle(transcript []*videopb.SpeechTranscription, skipFirstSentence bool) Transcription {
+func BuildSubtitlesFromGoogle(transcript []*videopb.SpeechTranscription, skipUpToTime float64) Transcription {
 	var transcription Transcription
-	skipped := false
+
+	fmt.Printf("\nTranscripts\n%+v\n", transcript)
 
 	for _, t := range transcript {
 		alternative := t.GetAlternatives()[0]
-		if skipFirstSentence && !skipped {
-			skipped = true
-			continue
-		}
-
-		fmt.Printf("Word level information:\n")
 		for _, wordInfo := range alternative.GetWords() {
 			startTime := wordInfo.GetStartTime()
 			endTime := wordInfo.GetEndTime()
-			transcription.Results = append(transcription.Results, Subtitle{
-				StartTime:  fmt.Sprintf("%4.1f", float64(startTime.GetSeconds())+float64(startTime.GetNanos())*1e-9),
-				EndTime:    fmt.Sprintf("%4.1f", float64(endTime.GetSeconds())+float64(endTime.GetNanos())*1e-9),
-				Transcript: wordInfo.GetWord(),
-			})
+			startTimeFloat := float64(startTime.GetSeconds()) + float64(startTime.GetNanos())*1e-9
+			if startTimeFloat > skipUpToTime {
+				transcription.Results = append(transcription.Results, Subtitle{
+					StartTime:  fmt.Sprintf("%4.1f", float64(startTime.GetSeconds())+float64(startTime.GetNanos())*1e-9),
+					EndTime:    fmt.Sprintf("%4.1f", float64(endTime.GetSeconds())+float64(endTime.GetNanos())*1e-9),
+					Transcript: wordInfo.GetWord(),
+				})
+			}
 		}
 	}
 	return transcription
@@ -70,4 +71,33 @@ func formatTimestamp(timestamp string) string {
 
 func WriteSRT(file, srtData string) error {
 	return ioutil.WriteFile(file, []byte(srtData), 0644)
+}
+
+func AudioDuration(path string) (duration float64, err error) {
+	t := 0.0
+
+	r, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	d := mp3.NewDecoder(r)
+	var f mp3.Frame
+	skipped := 0
+
+	for {
+
+		if err = d.Decode(&f, &skipped); err != nil {
+			if err == io.EOF {
+				break
+			}
+			fmt.Println(err)
+			return
+		}
+
+		t = t + f.Duration().Seconds()
+	}
+
+	return t, nil
 }
