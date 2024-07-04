@@ -8,7 +8,7 @@ mkShell {
     opentofu
     ffmpeg
     yt-dlp
-    ollama
+    go_1_23
     imagemagickBig
     fontconfig
   ];
