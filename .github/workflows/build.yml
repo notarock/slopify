@@ -30,6 +30,8 @@ jobs:
       with:
         nix_path: nixpkgs=channel:nixos-unstable
     - uses: rrbutani/use-nix-shell-action@v1
+      with:
+        file: shell.nix
     - name: Build
       run: go build -v . 
     - name: Test
